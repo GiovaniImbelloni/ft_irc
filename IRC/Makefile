@@ -32,19 +32,35 @@ SRCS = \
 	$(SRC_DIR)/cmds/nick_cmd.cpp	\
 	$(SRC_DIR)/cmds/pass_cmd.cpp	\
 	$(SRC_DIR)/cmds/user_cmd.cpp	\
-	$(SRC_DIR)/cmds/join_cdm.cpp
+	$(SRC_DIR)/cmds/join_cmd.cpp	\
+	$(SRC_DIR)/cmds/cap_cmd.cpp		\
+	$(SRC_DIR)/cmds/invite_cmd.cpp	\
+	$(SRC_DIR)/cmds/kick_cmd.cpp	\
+	$(SRC_DIR)/cmds/list_cmd.cpp	\
+	$(SRC_DIR)/cmds/mode_cmd.cpp	\
+	$(SRC_DIR)/cmds/names_cmd.cpp	\
+	$(SRC_DIR)/cmds/privmsg_cmd.cpp	\
+	$(SRC_DIR)/cmds/topic_cmd.cpp
 
 
 OBJS = \
-	$(OBJ_DIR)/main.o			\
-	$(OBJ_DIR)/Server.o			\
-	$(OBJ_DIR)/Client.o			\
-	$(OBJ_DIR)/Channel.o		\
-	$(OBJ_DIR)/Utils.o			\
-	$(OBJ_DIR)/cmds/nick_cmd.o	\
-	$(OBJ_DIR)/cmds/pass_cmd.o	\
-	$(OBJ_DIR)/cmds/user_cmd.o	\
-	$(OBJ_DIR)/cmds/join_cmd.o 
+	$(OBJ_DIR)/main.o				\
+	$(OBJ_DIR)/Server.o				\
+	$(OBJ_DIR)/Client.o				\
+	$(OBJ_DIR)/Channel.o			\
+	$(OBJ_DIR)/Utils.o				\
+	$(OBJ_DIR)/cmds/nick_cmd.o		\
+	$(OBJ_DIR)/cmds/pass_cmd.o		\
+	$(OBJ_DIR)/cmds/user_cmd.o		\
+	$(OBJ_DIR)/cmds/join_cmd.o		\
+	$(OBJ_DIR)/cmds/cap_cmd.o		\
+	$(OBJ_DIR)/cmds/invite_cmd.o	\
+	$(OBJ_DIR)/cmds/kick_cmd.o		\
+	$(OBJ_DIR)/cmds/list_cmd.o		\
+	$(OBJ_DIR)/cmds/mode_cmd.o		\
+	$(OBJ_DIR)/cmds/names_cmd.o		\
+	$(OBJ_DIR)/cmds/privmsg_cmd.o	\
+	$(OBJ_DIR)/cmds/topic_cmd.o
 
 # ==============================================================================
 # RECIPES

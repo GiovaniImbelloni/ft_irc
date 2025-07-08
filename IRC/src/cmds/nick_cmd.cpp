@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "Utils.hpp"
 
-void Server::nick_cmd(Client &client, int clientFd, std::vector<std::string> params) {
+void Server::nick_cmd(Client& client, int clientFd, std::vector<std::string> params) {
 	if (params.empty()) {
 		sendMessage(clientFd, "431 :No nickname given\r\n");
 		return;
@@ -20,6 +20,14 @@ void Server::nick_cmd(Client &client, int clientFd, std::vector<std::string> par
 	if (!oldNick.empty() && oldNick != newNick) {
 		std::string msg = ":" + oldNick + " NICK :" + newNick + "\r\n";
 		sendMessage(clientFd, msg);
+
+		std::map<std::string, Channel>::iterator it;
+		for (it = channels_.begin(); it != channels_.end(); ++it) {
+			Channel& channel = it->second;
+			if (channel.isMember(client)) {
+				sendToChannelExcept(channel, client, msg);
+			}
+		}
 	}
 	else if (oldNick.empty()) {
 		std::string msg = ":" + newNick + " NICK :" + newNick + "\r\n";

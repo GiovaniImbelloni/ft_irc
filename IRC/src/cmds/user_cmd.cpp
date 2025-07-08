@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "Utils.hpp"
 
-void Server::user_cmd(Client &client, int clientFd, std::vector<std::string> params) {
+void Server::user_cmd(Client& client, int clientFd, std::vector<std::string> params) {
 	if (!client.getUserName().empty()) {
 		sendMessage(clientFd, "462 :You may not reregister\r\n");
 		return;

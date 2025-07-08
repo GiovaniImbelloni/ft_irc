@@ -22,7 +22,26 @@ Server::Server(int port, const std::string &password)
 		clientBuffers_(),
 		mapClients_(),
 		channels_() 
-{}
+{
+	preAuthCommands_["CAP"] = &Server::cap_cmd;
+	preAuthCommands_["PASS"] = &Server::pass_cmd;
+	preAuthCommands_["NICK"] = &Server::nick_cmd;
+	preAuthCommands_["USER"] = &Server::user_cmd;
+
+	postAuthCommands_["CAP"] = &Server::cap_cmd;
+	postAuthCommands_["PASS"] = &Server::pass_cmd;
+	postAuthCommands_["NICK"] = &Server::nick_cmd;
+	postAuthCommands_["USER"] = &Server::user_cmd;
+	postAuthCommands_["JOIN"] = &Server::join_cmd;
+	postAuthCommands_["INVITE"] = &Server::invite_cmd;
+	postAuthCommands_["KICK"] = &Server::kick_cmd;
+	postAuthCommands_["LIST"] = &Server::list_cmd;
+	postAuthCommands_["MODE"] = &Server::mode_cmd;
+	postAuthCommands_["NAMES"] = &Server::names_cmd;
+	postAuthCommands_["PRIVMSG"] = &Server::privmsg_cmd;
+	postAuthCommands_["TOPIC"] = &Server::topic_cmd;
+
+}
 
 Server::~Server() {
 	for (std::map<int, Client>::iterator it = mapClients_.begin(); it != mapClients_.end(); ++it) {
@@ -188,9 +207,9 @@ void Server::sendToChannel(const std::string& channelName, const std::string& me
     std::map<std::string, Channel>::iterator it = channels_.find(channelName);
     if (it != channels_.end()) {
         Channel& channel = it->second;
-        std::map<int, Client*> members = channel.getMembers();
+        const std::map<int, Client*>& members = channel.getMembers();
 
-        for (std::map<int, Client*>::iterator memberIt = members.begin(); memberIt != members.end(); ++memberIt) {
+        for (std::map<int, Client*>::const_iterator memberIt = members.begin(); memberIt != members.end(); ++memberIt) {
             Client* client = memberIt->second;
             if (client) {
                 int clientFd = client->getClientFd();
@@ -213,58 +232,46 @@ void Server::sendToChannelExcept(const Channel& channel, const Client& sender, c
 	}
 }
 
-void Server::createChannel(const std::string &channelName, Client &client) {
+void Server::createChannel(const std::string& channelName, Client& client) {
 	channels_.insert(std::make_pair(channelName, Channel(channelName, client)));
 }
 
-void	Server::deleteChannel(std::string &channelName) {
+void	Server::deleteChannel(const std::string& channelName) {
 	channels_.erase(channelName);
 }
 
 void	Server::leaveAllChannels(Client &client) {
-	std::map<std::string, Channel>::iterator itChannel = channels_.begin();
+	std::map<std::string, Channel>::iterator it = channels_.begin();
 
-	while (itChannel != channels_.end()) {
-		if (!itChannel->second.getMembers().empty() && itChannel->second.isMember(client)) {
-			std::string channelName = itChannel->second.getChannelName();
-			std::string nickname = client.getNickName();
-			std::string leaveMessage = ":" + client.getNickName() + " PART " + itChannel->second.getChannelName() + "\r\n";
+	while (it != channels_.end()) {
+		Channel& channel = it->second;
+		channel.removeInvited(client);
 
-			if (itChannel->second.isOperator(client)) {
-				itChannel->second.removeOperator(client);
-				itChannel->second.removeMember(client);
-				itChannel->second.removeInvited(client);
+		if (channel.isMember(client)) {
+			std::string channelName = channel.getChannelName();
+			std::string partMessage = ":" + client.getNickName() + " PART " + channelName + "\r\n";
 
-			} else {
-				itChannel->second.removeMember(client);
-				itChannel->second.removeInvited(client);
-			}
+			if (channel.isOperator(client)) {
+				channel.removeOperator(client);
+			} 
 
-			if (channels_[channelName].getMembers().size() == 0) {
-				++itChannel;
+			channel.removeMember(client);
+
+			std::cout << client.getNickName() << " left the channel " << channelName << std::endl;
+
+			++it;
+			if (channel.getMembers().empty()) {
 				deleteChannel(channelName);
-				continue;
-
 			} else {
-				sendToChannel(itChannel->second.getChannelName(), leaveMessage);
+				sendToChannel(channelName, partMessage);
 			}
-			
-			if (isChannelExist(channelName) && !channels_[channelName].isMember(client)) {
-				std::string errorMessage = ":442 " + nickname + " " + channelName + " :You're not on that channel\n";
-				send(client.getClientFd(), errorMessage.c_str(), errorMessage.size(), 0);
-				++itChannel;
-				continue;
-			}
-			
+		} else {
+			++it;
 		}
-		if (channels_.empty()) {
-			break;
-		}
-		++itChannel;
 	}
 }
 
-bool Server::isChannelExist(const std::string &channelName) const {
+bool Server::isChannelExist(const std::string& channelName) const {
 	std::map<std::string, Channel>::const_iterator it = channels_.find(channelName);
 	if (it == channels_.end()) {
 		return false;
@@ -308,7 +315,6 @@ void Server::tryAuthenticate(Client& client, int clientFd) {
 		std::string welcomeMsg = "001 " + client.getNickName() + " :Welcome to the IRC server\r\n";
 		sendMessage(clientFd, welcomeMsg);
 
-		// Outros códigos opcionais (002, 003, etc.)
 	}
 }
 
@@ -316,10 +322,8 @@ void Server::tryAuthenticate(Client& client, int clientFd) {
 bool Server::isNicknameInUse(const std::string &nick) const {
     std::map<int, Client>::const_iterator it;
 
-    for (it = mapClients_.begin(); it != mapClients_.end(); ++it)
-	{
-        if (it->second.getNickName() == nick)
-		{
+    for (it = mapClients_.begin(); it != mapClients_.end(); ++it) {
+        if (it->second.getNickName() == nick) {
             return true;
         }
     }
@@ -337,36 +341,22 @@ void Server::processClientMessage(int clientFd, std::string cmd, std::vector<std
 	if (cmd.empty())
 		return;
 
-	if(!authenticatedClients_[clientFd]) {
-		if (cmd == "CAP") {
-			return;
-		}
-		else if (cmd == "PASS") {
-			pass_cmd(client, clientFd, params);
-			return;
-		}
-		else if (cmd == "NICK") {
-			nick_cmd(client, clientFd, params);
-			return;
-		}
-		else if (cmd == "USER") {
-			user_cmd(client, clientFd, params);
-			return;
+	if (!authenticatedClients_[clientFd]) {
+		std::map<std::string, CommandHandler>::iterator it = preAuthCommands_.find(cmd);
+		if (it != preAuthCommands_.end()) {
+			CommandHandler handler = it->second;
+			(this->*handler)(client, clientFd, params);
 		} else {
 			sendMessage(clientFd, "451 :You have not registered\r\n");
-			return;
 		}
-	}
-
-	if(authenticatedClients_[clientFd])
-	{
-
-		if (cmd == "NICK")
-			nick_cmd(client, clientFd, params);
-		else if (cmd == "USER")
-			user_cmd(client, clientFd, params);
-		else if (cmd == "JOIN")
-			join_cmd(client, clientFd, params);
+	} else {
+		std::map<std::string, CommandHandler>::iterator it = postAuthCommands_.find(cmd);
+		if (it != postAuthCommands_.end()) {
+			CommandHandler handler = it->second;
+			(this->*handler)(client, clientFd, params);
+		} else {
+			sendMessage(clientFd, "421 " + cmd + " :Unknown command\r\n");
+		}
 	}
 }
 
@@ -451,4 +441,21 @@ void Server::processClientData(int clientFd) {
 		processClientMessage(clientFd, cmd_, params_);
 		++commandsProcessed;
 	}
+}
+
+Client* Server::findClientByNick(const std::string& nickname) {
+    for (std::map<int, Client>::iterator it = mapClients_.begin(); it != mapClients_.end(); ++it) {
+        if (it->second.getNickName() == nickname) {
+            return &it->second;
+        }
+    }
+    return NULL;
+}
+
+bool Server::isClientInChannel(const Client& client, const std::string& channelName) const {
+    std::map<std::string, Channel>::const_iterator it = channels_.find(channelName);
+    if (it != channels_.end()) {
+        return it->second.isMember(client);
+    }
+    return false;
 }

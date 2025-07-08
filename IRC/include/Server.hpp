@@ -38,6 +38,10 @@ private:
 	std::map<int, std::string>		clientBuffers_;
 	std::map<int, Client> 			mapClients_;
 	std::map<std::string, Channel>	channels_;
+
+	typedef void (Server::*CommandHandler)(Client&, int, std::vector<std::string>);
+	std::map<std::string, CommandHandler> preAuthCommands_;
+	std::map<std::string, CommandHandler> postAuthCommands_;
 	
 	void	start();
 	void	handleNewConnection();
@@ -50,14 +54,22 @@ private:
 	void	processClientData(int clientFd);
 	void	tryAuthenticate(Client& client, int clientFd);
 
-	void	createChannel(const std::string &channelName, Client &creator);
-	void	deleteChannel(std::string &channelName);
-	bool	isChannelExist(const std::string &channelName) const;
+	void	createChannel(const std::string& channelName, Client& creator);
+	void	deleteChannel(const std::string& channelName);
+	bool	isChannelExist(const std::string& channelName) const;
 
-	void	pass_cmd(Client &client, int clientFd, std::vector<std::string> params);
-	void	nick_cmd(Client &client, int clientFd, std::vector<std::string> params);
-	void	user_cmd(Client &client, int clientFd, std::vector<std::string> params);
-	void	join_cmd(Client &client, int clientFd, std::vector<std::string> params);
+	void	pass_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	nick_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	user_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	join_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	cap_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	invite_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	kick_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	list_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	mode_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	names_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	privmsg_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	topic_cmd(Client& client, int clientFd, std::vector<std::string> params);
 
 	bool	isChannelNameValid(const std::string& name, int clientFd);
 	void	joinChannelWithoutPassword(Client &client, int clientFd, const std::string &channelName);
@@ -69,4 +81,7 @@ private:
 	void	leaveAllChannels(Client &client);
 
 	std::string buildWelcomeMessage(Channel &channel, Client& client);
+
+	Client*	findClientByNick(const std::string& nickname);
+	bool	isClientInChannel(const Client& client, const std::string& channelName) const;
 };

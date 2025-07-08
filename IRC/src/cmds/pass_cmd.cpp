@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "Utils.hpp"
 
-void	Server::pass_cmd(Client &client, int clientFd, std::vector<std::string> params) {
+void	Server::pass_cmd(Client& client, int clientFd, std::vector<std::string> params) {
 	if (client.getIsRegistratedWithPass()) {
 		sendMessage(clientFd, "462 :You may not reregister\r\n");
 		return;

@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "Utils.hpp"
 
-void Server::join_cmd(Client &client, int clientFd, std::vector<std::string> params) {
+void Server::join_cmd(Client& client, int clientFd, std::vector<std::string> params) {
 	if (params.empty()) {
 		sendMessage(clientFd, ":server 461 JOIN :Not enough parameters\r\n");
 		return;
