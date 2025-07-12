@@ -70,6 +70,8 @@ private:
 	void	names_cmd(Client& client, int clientFd, std::vector<std::string> params);
 	void	privmsg_cmd(Client& client, int clientFd, std::vector<std::string> params);
 	void	topic_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	part_cmd(Client& client, int clientFd, std::vector<std::string> params);
+	void	quit_cmd(Client& client, int clientFd, std::vector<std::string> params);
 
 	bool	isChannelNameValid(const std::string& name, int clientFd);
 	void	joinChannelWithoutPassword(Client &client, int clientFd, const std::string &channelName);

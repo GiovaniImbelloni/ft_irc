@@ -16,13 +16,13 @@ void Server::join_cmd(Client& client, int clientFd, std::vector<std::string> par
 	}
 
 	if (channelName == "0" && params.size() > 1) {
-		sendMessage(clientFd, "461 JOIN :Too many parameters");
+		sendMessage(clientFd, "461 JOIN :Too many parameters\r\n");
 		return;
 
 	}
 
 	if (params.size() > 2) {
-		sendMessage(clientFd, "461 JOIN :Too many parameters");
+		sendMessage(clientFd, "461 JOIN :Too many parameters\r\n");
 		return;
 
 	}
@@ -40,7 +40,7 @@ void Server::join_cmd(Client& client, int clientFd, std::vector<std::string> par
 }
 
 bool Server::isChannelNameValid(const std::string& name, int clientFd) {
-	if (name.empty() || (name[0] != '#' && name[0] != '&')) {
+	if (name.size() < 2 || name[0] != '#') {
 		sendMessage(clientFd, ":server 476 " + name + " :Invalid channel name\r\n");
 		return false;
 	}

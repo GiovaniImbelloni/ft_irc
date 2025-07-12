@@ -4,10 +4,10 @@
 volatile bool g_running = true;
 
 void signalHandler(int signum) {
-    if (signum == SIGINT) {
-        std::cout << "\nSIGINT received. ";
-        g_running = false;
-    }
+	if (signum == SIGINT) {
+		std::cout << "\nSIGINT received. ";
+		g_running = false;
+	}
 }
 
 Server::Server(int port, const std::string &password) 
@@ -40,23 +40,25 @@ Server::Server(int port, const std::string &password)
 	postAuthCommands_["NAMES"] = &Server::names_cmd;
 	postAuthCommands_["PRIVMSG"] = &Server::privmsg_cmd;
 	postAuthCommands_["TOPIC"] = &Server::topic_cmd;
+	postAuthCommands_["PART"] = &Server::part_cmd;
+	postAuthCommands_["QUIT"] = &Server::quit_cmd;
 
 }
 
 Server::~Server() {
 	for (std::map<int, Client>::iterator it = mapClients_.begin(); it != mapClients_.end(); ++it) {
-        sendMessage(it->first, "ERROR :Server shutting down\r\n");
+		sendMessage(it->first, "ERROR :Server shutting down\r\n");
 		close(it->first);
-    }
+	}
 
 	if (!pollfds_.empty()) {
 		close(pollfds_[0].fd);
 	}
 
 	mapClients_.clear();
-    pollfds_.clear();
-    authenticatedClients_.clear();
-    clientBuffers_.clear();
+	pollfds_.clear();
+	authenticatedClients_.clear();
+	clientBuffers_.clear();
 
 	std::cout << "Server shutting down..." << std::endl;
 }
@@ -64,8 +66,8 @@ Server::~Server() {
 void Server::printClientInfo(int clientFd) {
 	Client client = mapClients_[clientFd];
 	std::cout << client.getNickName() << "@" << client.getUserName()
-          << " [" << client.getClientAddress() << ":" << client.getClientPort()
-          << "] (fd: " << client.getClientFd() << ")" << std::endl;
+		<< " [" << client.getClientAddress() << ":" << client.getClientPort()
+		<< "] (fd: " << client.getClientFd() << ")" << std::endl;
 }
 
 
@@ -161,6 +163,8 @@ void Server::handleClientData(int fd) {
 		cleanupClient(fd);
 	}
 	else {
+		std::cout << buffer << std::endl;
+		std::cout << "FD: " << fd << std::endl;
 		clientBuffers_[fd] += std::string(buffer, bytesReceived);
 		processClientData(fd);	
 	}
@@ -204,22 +208,22 @@ void Server::handleNewConnection() {
 }
 
 void Server::sendToChannel(const std::string& channelName, const std::string& message) {
-    std::map<std::string, Channel>::iterator it = channels_.find(channelName);
-    if (it != channels_.end()) {
-        Channel& channel = it->second;
-        const std::map<int, Client*>& members = channel.getMembers();
+	std::map<std::string, Channel>::iterator it = channels_.find(channelName);
+	if (it != channels_.end()) {
+		Channel& channel = it->second;
+		const std::map<int, Client*>& members = channel.getMembers();
 
-        for (std::map<int, Client*>::const_iterator memberIt = members.begin(); memberIt != members.end(); ++memberIt) {
-            Client* client = memberIt->second;
-            if (client) {
-                int clientFd = client->getClientFd();
-                sendMessage(clientFd, message);
-            }
-        }
-    }
-    else {
-        std::cerr << "Channel " << channelName << " does not exist." << std::endl;
-    }
+		for (std::map<int, Client*>::const_iterator memberIt = members.begin(); memberIt != members.end(); ++memberIt) {
+			Client* client = memberIt->second;
+			if (client) {
+				int clientFd = client->getClientFd();
+				sendMessage(clientFd, message);
+			}
+		}
+	}
+	else {
+		std::cerr << "Channel " << channelName << " does not exist." << std::endl;
+	}
 }
 
 void Server::sendToChannelExcept(const Channel& channel, const Client& sender, const std::string& message) const {
@@ -280,24 +284,25 @@ bool Server::isChannelExist(const std::string& channelName) const {
 }
 
 void Server::cleanupClient(int clientFd) {
-    std::cout << "Cleaning up client " << clientFd << " " << std::endl;
+	std::cout << "Cleaning up client " << clientFd << " " << std::endl;
 
-    if (mapClients_.find(clientFd) != mapClients_.end()) {
-        Client& client = mapClients_[clientFd];
-        leaveAllChannels(client);
-    }	
+	if (mapClients_.find(clientFd) != mapClients_.end()) {
+		Client& client = mapClients_[clientFd];
+		leaveAllChannels(client);
+	}	
 
-    close(clientFd);
+	close(clientFd);
 
-    authenticatedClients_.erase(clientFd);
-    mapClients_.erase(clientFd);
+	authenticatedClients_.erase(clientFd);
+	mapClients_.erase(clientFd);
+	clientBuffers_.erase(clientFd);
 
-    for (std::vector<struct pollfd>::iterator it = pollfds_.begin(); it != pollfds_.end(); ++it) {
-        if (it->fd == clientFd) {
-            pollfds_.erase(it);
-            break;
-        }
-    }
+	for (std::vector<struct pollfd>::iterator it = pollfds_.begin(); it != pollfds_.end(); ++it) {
+		if (it->fd == clientFd) {
+			pollfds_.erase(it);
+			break;
+		}
+	}
 }
 
 void Server::tryAuthenticate(Client& client, int clientFd) {
@@ -320,14 +325,14 @@ void Server::tryAuthenticate(Client& client, int clientFd) {
 
 
 bool Server::isNicknameInUse(const std::string &nick) const {
-    std::map<int, Client>::const_iterator it;
+	std::map<int, Client>::const_iterator it;
 
-    for (it = mapClients_.begin(); it != mapClients_.end(); ++it) {
-        if (it->second.getNickName() == nick) {
-            return true;
-        }
-    }
-    return false;
+	for (it = mapClients_.begin(); it != mapClients_.end(); ++it) {
+		if (it->second.getNickName() == nick) {
+			return true;
+		}
+	}
+	return false;
 }
 
 void Server::processClientMessage(int clientFd, std::string cmd, std::vector<std::string> params) {
@@ -369,7 +374,7 @@ void Server::splitCmdLine(std::string input) {
 
 	size_t first_not_space = input.find_first_not_of(" \t\v\f");
 	if (first_not_space == std::string::npos)
-    	return;
+		return;
 	input = input.substr(first_not_space);
 
 	size_t space_pos = input.find_first_of(" \t\v\f");
@@ -380,9 +385,9 @@ void Server::splitCmdLine(std::string input) {
 	}
 
 	if (space_pos != std::string::npos) {
-    	input.erase(0, space_pos + 1);
+		input.erase(0, space_pos + 1);
 	} else {
-    	input.clear();
+		input.clear();
 	}
 
 	while (!input.empty()) {
@@ -412,23 +417,23 @@ void Server::splitCmdLine(std::string input) {
 }
 
 std::string sanitizeInput(const std::string& input) {
-    std::string result;
-    for (size_t i = 0; i < input.size(); ++i) {
-        if (isprint(input[i]) || input[i] == '\r' || input[i] == '\n') {
-            result += input[i];
-        }
-    }
-    return result;
+	std::string result;
+	for (size_t i = 0; i < input.size(); ++i) {
+		if (isprint(input[i]) || input[i] == '\r' || input[i] == '\n') {
+			result += input[i];
+		}
+	}
+	return result;
 }
 
 void Server::processClientData(int clientFd) {
 	int maxCommandsPerLoop = 10;
 	int commandsProcessed = 0;
-    std::string &buffer = clientBuffers_[clientFd];
+	std::string &buffer = clientBuffers_[clientFd];
 
-    buffer = sanitizeInput(buffer);
+	buffer = sanitizeInput(buffer);
 
-    size_t pos;
+	size_t pos;
 
 	while ((pos = buffer.find_first_of("\r\n")) != std::string::npos && commandsProcessed < maxCommandsPerLoop) {
 		std::string singleMessage = buffer.substr(0, pos);
@@ -444,18 +449,18 @@ void Server::processClientData(int clientFd) {
 }
 
 Client* Server::findClientByNick(const std::string& nickname) {
-    for (std::map<int, Client>::iterator it = mapClients_.begin(); it != mapClients_.end(); ++it) {
-        if (it->second.getNickName() == nickname) {
-            return &it->second;
-        }
-    }
-    return NULL;
+	for (std::map<int, Client>::iterator it = mapClients_.begin(); it != mapClients_.end(); ++it) {
+		if (it->second.getNickName() == nickname) {
+			return &it->second;
+		}
+	}
+	return NULL;
 }
 
 bool Server::isClientInChannel(const Client& client, const std::string& channelName) const {
-    std::map<std::string, Channel>::const_iterator it = channels_.find(channelName);
-    if (it != channels_.end()) {
-        return it->second.isMember(client);
-    }
-    return false;
+	std::map<std::string, Channel>::const_iterator it = channels_.find(channelName);
+	if (it != channels_.end()) {
+		return it->second.isMember(client);
+	}
+	return false;
 }

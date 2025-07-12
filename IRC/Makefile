@@ -40,7 +40,9 @@ SRCS = \
 	$(SRC_DIR)/cmds/mode_cmd.cpp	\
 	$(SRC_DIR)/cmds/names_cmd.cpp	\
 	$(SRC_DIR)/cmds/privmsg_cmd.cpp	\
-	$(SRC_DIR)/cmds/topic_cmd.cpp
+	$(SRC_DIR)/cmds/topic_cmd.cpp	\
+	$(SRC_DIR)/cmds/part_cmd.cpp	\
+	$(SRC_DIR)/cmds/quit_cmd.cpp
 
 
 OBJS = \
@@ -60,7 +62,9 @@ OBJS = \
 	$(OBJ_DIR)/cmds/mode_cmd.o		\
 	$(OBJ_DIR)/cmds/names_cmd.o		\
 	$(OBJ_DIR)/cmds/privmsg_cmd.o	\
-	$(OBJ_DIR)/cmds/topic_cmd.o
+	$(OBJ_DIR)/cmds/topic_cmd.o		\
+	$(OBJ_DIR)/cmds/part_cmd.o		\
+	$(OBJ_DIR)/cmds/quit_cmd.o
 
 # ==============================================================================
 # RECIPES
